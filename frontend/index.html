@@ -1,0 +1,1268 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Contactos — Gestión de Directorio</title>
+  <meta name="description" content="Aplicación de gestión de contactos y grupos. Crea, edita y organiza tus contactos de forma estética y eficiente." />
+  <meta name="theme-color" content="#0c0c0e" />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet" />
+  <style>
+    /* ── TOKENS ─────────────────────────────────────────── */
+    :root {
+      --bg:      #0c0c0e;
+      --surface: #141417;
+      --card:    #1a1a1f;
+      --border:  #2a2a32;
+      --accent:  #c8a96e;
+      --accent2: #7b9e87;
+      --text:    #e8e4dc;
+      --muted:   #7a7680;
+      --danger:  #c06060;
+      --radius:  12px;
+      --font-serif: 'Cormorant Garamond', Georgia, serif;
+      --font-mono:  'DM Mono', monospace;
+      --sidebar-width: 220px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      grid-template-columns: var(--sidebar-width) 1fr;
+      grid-template-areas: "nav header" "nav main";
+    }
+
+    /* ── NOISE OVERLAY ──────────────────────────────────── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+      pointer-events: none; z-index: 999;
+    }
+
+    /* ── SIDEBAR NAV ────────────────────────────────────── */
+    nav {
+      grid-area: nav;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 32px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      position: sticky; top: 0; height: 100vh;
+      overflow-y: auto;
+      transition: transform 0.3s ease;
+      z-index: 50;
+    }
+
+    .nav-brand {
+      padding: 0 24px 28px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 16px;
+    }
+
+    .nav-brand h1 {
+      font-family: var(--font-serif);
+      font-size: 22px;
+      font-weight: 300;
+      letter-spacing: 0.05em;
+      line-height: 1.2;
+      color: var(--accent);
+    }
+
+    .nav-brand span {
+      display: block;
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 24px;
+      cursor: pointer;
+      color: var(--muted);
+      transition: all 0.2s;
+      border-left: 2px solid transparent;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .nav-item:hover { color: var(--text); background: rgba(200,169,110,0.05); }
+    .nav-item.active {
+      color: var(--accent);
+      border-left-color: var(--accent);
+      background: rgba(200,169,110,0.08);
+    }
+
+    .nav-icon { width: 16px; height: 16px; opacity: 0.7; flex-shrink: 0; }
+
+    /* ── HAMBURGER (mobile) ─────────────────────────────── */
+    .hamburger {
+      display: none;
+      background: none; border: none;
+      color: var(--text); cursor: pointer;
+      padding: 4px; font-size: 22px;
+    }
+
+    .nav-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 40;
+    }
+
+    /* ── HEADER ─────────────────────────────────────────── */
+    header {
+      grid-area: header;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 20px 36px;
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px;
+    }
+
+    header h2 {
+      font-family: var(--font-serif);
+      font-size: 28px;
+      font-weight: 300;
+      letter-spacing: 0.02em;
+    }
+
+    .header-left { display: flex; align-items: center; gap: 12px; }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 9px 18px;
+      border-radius: var(--radius);
+      border: 1px solid transparent;
+      cursor: pointer;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #0c0c0e;
+      border-color: var(--accent);
+    }
+    .btn-primary:hover { background: #d9bc85; }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text);
+      border-color: var(--border);
+    }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+    .btn-danger {
+      background: transparent;
+      color: var(--danger);
+      border-color: var(--danger);
+    }
+    .btn-danger:hover { background: var(--danger); color: #fff; }
+
+    /* ── MAIN ───────────────────────────────────────────── */
+    main {
+      grid-area: main;
+      padding: 32px 36px;
+      overflow-y: auto;
+    }
+
+    .view { display: none; }
+    .view.active { display: block; }
+
+    /* ── LOADING ────────────────────────────────────────── */
+    .loading-spinner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 20px;
+      color: var(--muted);
+      gap: 16px;
+    }
+
+    .spinner {
+      width: 36px; height: 36px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── EMPTY STATE ────────────────────────────────────── */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--muted);
+    }
+
+    .empty-state-icon { font-size: 48px; margin-bottom: 12px; }
+    .empty-state-text { font-size: 13px; line-height: 1.6; }
+
+    /* ── CONTACT GRID ───────────────────────────────────── */
+    .contacts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 20px;
+    }
+
+    .contact-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      transition: transform 0.2s, box-shadow 0.2s;
+      cursor: pointer;
+    }
+
+    .contact-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+      border-color: var(--accent);
+    }
+
+    .card-photo {
+      width: 100%; height: 160px;
+      object-fit: cover;
+      background: var(--surface);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--muted);
+      font-size: 48px;
+    }
+
+    .card-photo img { width: 100%; height: 100%; object-fit: cover; }
+
+    .card-body { padding: 16px; }
+
+    .card-name {
+      font-family: var(--font-serif);
+      font-size: 18px;
+      font-weight: 400;
+      line-height: 1.2;
+      margin-bottom: 6px;
+    }
+
+    .card-group {
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent2);
+      margin-bottom: 8px;
+    }
+
+    .card-info { color: var(--muted); font-size: 11px; line-height: 1.8; }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-size: 9px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .badge-active   { background: rgba(123,158,135,0.2); color: var(--accent2); border: 1px solid rgba(123,158,135,0.4); }
+    .badge-inactive { background: rgba(192,96,96,0.2);   color: var(--danger);  border: 1px solid rgba(192,96,96,0.4);  }
+
+    /* ── TABLE ──────────────────────────────────────────── */
+    .table-wrap { overflow-x: auto; border-radius: var(--radius); border: 1px solid var(--border); }
+
+    table { width: 100%; border-collapse: collapse; }
+
+    th {
+      background: var(--surface);
+      padding: 12px 16px;
+      text-align: left;
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+    }
+
+    td {
+      padding: 13px 16px;
+      border-bottom: 1px solid rgba(42,42,50,0.5);
+      vertical-align: middle;
+      color: var(--text);
+    }
+
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(200,169,110,0.04); }
+
+    .td-actions { display: flex; gap: 8px; }
+
+    /* ── MODAL ──────────────────────────────────────────── */
+    .modal-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(12,12,14,0.85);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(4px);
+    }
+
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      width: min(600px, 94vw);
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 40px 100px rgba(0,0,0,0.7);
+    }
+
+    .modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 24px 28px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .modal-header h3 {
+      font-family: var(--font-serif);
+      font-size: 22px;
+      font-weight: 300;
+    }
+
+    .modal-close {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 16px;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s;
+    }
+
+    .modal-close:hover { border-color: var(--danger); color: var(--danger); }
+
+    .modal-body { padding: 28px; }
+
+    /* ── FORM ───────────────────────────────────────────── */
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-group.full { grid-column: 1 / -1; }
+
+    label {
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    input, select, textarea {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      transition: border-color 0.2s;
+      outline: none;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--accent);
+    }
+
+    textarea { resize: vertical; min-height: 80px; }
+
+    select option { background: var(--surface); }
+
+    .photo-upload-area {
+      border: 1px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+
+    .photo-upload-area:hover { border-color: var(--accent); }
+
+    .photo-preview {
+      width: 80px; height: 80px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid var(--accent);
+      margin: 0 auto 8px;
+      display: block;
+    }
+
+    .form-footer {
+      display: flex; justify-content: flex-end; gap: 10px;
+      margin-top: 24px;
+    }
+
+    /* ── DETAIL MODAL ───────────────────────────────────── */
+    .detail-photo {
+      width: 100px; height: 100px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 3px solid var(--accent);
+      display: block;
+      margin: 0 auto 20px;
+    }
+
+    .detail-name {
+      font-family: var(--font-serif);
+      font-size: 28px;
+      font-weight: 300;
+      text-align: center;
+      margin-bottom: 6px;
+    }
+
+    .detail-group {
+      text-align: center;
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--accent2);
+      margin-bottom: 20px;
+    }
+
+    .detail-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .detail-item label {
+      display: block;
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 3px;
+    }
+
+    .detail-item span {
+      color: var(--text);
+      font-size: 12px;
+    }
+
+    /* ── TOAST ──────────────────────────────────────────── */
+    .toast {
+      position: fixed;
+      bottom: 28px; right: 28px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 20px;
+      font-size: 12px;
+      z-index: 200;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s ease;
+      max-width: 320px;
+    }
+
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.success { border-left: 3px solid var(--accent2); }
+    .toast.error   { border-left: 3px solid var(--danger); }
+
+    /* ── SEARCH ─────────────────────────────────────────── */
+    .toolbar {
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+
+    .search-input {
+      flex: 1;
+      max-width: 320px;
+      min-width: 150px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 9px 14px;
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      outline: none;
+    }
+
+    .search-input:focus { border-color: var(--accent); }
+
+    /* ── STATS ──────────────────────────────────────────── */
+    .stats { display: flex; gap: 16px; margin-bottom: 28px; flex-wrap: wrap; }
+
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      flex: 1;
+      min-width: 120px;
+    }
+
+    .stat-value {
+      font-family: var(--font-serif);
+      font-size: 32px;
+      font-weight: 300;
+      color: var(--accent);
+    }
+
+    .stat-label {
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    /* ── TOGGLE ─────────────────────────────────────────── */
+    .view-toggle {
+      display: flex;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .view-toggle button {
+      padding: 8px 14px;
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+
+    .view-toggle button.active { background: var(--accent); color: #0c0c0e; }
+
+    /* ── RESPONSIVE ─────────────────────────────────────── */
+    @media (max-width: 768px) {
+      body {
+        grid-template-columns: 1fr;
+        grid-template-areas: "header" "main";
+      }
+
+      nav {
+        position: fixed;
+        top: 0; left: 0;
+        width: var(--sidebar-width);
+        height: 100vh;
+        transform: translateX(-100%);
+      }
+
+      nav.open { transform: translateX(0); }
+
+      .nav-overlay.open { display: block; }
+
+      .hamburger { display: block; }
+
+      header { padding: 16px 20px; }
+      header h2 { font-size: 22px; }
+
+      main { padding: 20px 16px; }
+
+      .contacts-grid {
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 14px;
+      }
+
+      .form-grid { grid-template-columns: 1fr; }
+
+      .detail-grid { grid-template-columns: 1fr; }
+
+      .stat-card { min-width: 90px; }
+      .stat-value { font-size: 24px; }
+    }
+
+    @media (max-width: 480px) {
+      .contacts-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .stats { flex-direction: column; }
+
+      .btn { padding: 8px 12px; font-size: 10px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── NAV OVERLAY (mobile) ───────────────────────────────── -->
+<div class="nav-overlay" id="nav-overlay" onclick="toggleSidebar()"></div>
+
+<!-- ── SIDEBAR ──────────────────────────────────────────── -->
+<nav id="sidebar">
+  <div class="nav-brand">
+    <h1>Directorio</h1>
+    <span>Gestión de Contactos</span>
+  </div>
+  <div class="nav-item active" onclick="showView('personas-view', this)">
+    <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0"/>
+    </svg>
+    Personas
+  </div>
+  <div class="nav-item" onclick="showView('grupos-view', this)">
+    <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+    </svg>
+    Grupos
+  </div>
+</nav>
+
+<!-- ── HEADER ────────────────────────────────────────────── -->
+<header>
+  <div class="header-left">
+    <button class="hamburger" id="btn-hamburger" onclick="toggleSidebar()" aria-label="Menú">☰</button>
+    <h2 id="page-title">Personas</h2>
+  </div>
+  <div style="display:flex;gap:10px;">
+    <button class="btn btn-primary" id="btn-new">+ Nuevo</button>
+  </div>
+</header>
+
+<!-- ── MAIN ──────────────────────────────────────────────── -->
+<main>
+
+  <!-- LOADING -->
+  <div id="loading-state" class="loading-spinner">
+    <div class="spinner"></div>
+    <span>Cargando datos…</span>
+  </div>
+
+  <!-- PERSONAS VIEW -->
+  <div class="view" id="personas-view">
+    <div class="stats">
+      <div class="stat-card">
+        <div class="stat-value" id="stat-total">0</div>
+        <div class="stat-label">Total contactos</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-active">0</div>
+        <div class="stat-label">Activos</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-groups">0</div>
+        <div class="stat-label">Grupos</div>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <input class="search-input" id="search-personas" placeholder="Buscar contacto..." oninput="filterPersonas()" />
+      <div class="view-toggle">
+        <button class="active" id="btn-grid" onclick="setPersonaView('grid')">⊞</button>
+        <button id="btn-list" onclick="setPersonaView('list')">☰</button>
+      </div>
+    </div>
+
+    <div id="personas-grid" class="contacts-grid"></div>
+    <div id="personas-table-wrap" class="table-wrap" style="display:none;">
+      <table>
+        <thead>
+          <tr>
+            <th>Nombre</th><th>Correo</th><th>Celular</th><th>Grupo</th><th>Estado</th><th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="personas-tbody"></tbody>
+      </table>
+    </div>
+    <div id="personas-empty" class="empty-state" style="display:none;">
+      <div class="empty-state-icon">📇</div>
+      <div class="empty-state-text">No hay contactos registrados.<br>Crea uno con el botón "+ Nuevo".</div>
+    </div>
+  </div>
+
+  <!-- GRUPOS VIEW -->
+  <div class="view" id="grupos-view">
+    <div class="toolbar">
+      <input class="search-input" id="search-grupos" placeholder="Buscar grupo..." oninput="filterGrupos()" />
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Nombre del Grupo</th><th>Estado</th><th>Personas</th><th>Acciones</th></tr>
+        </thead>
+        <tbody id="grupos-tbody"></tbody>
+      </table>
+    </div>
+    <div id="grupos-empty" class="empty-state" style="display:none;">
+      <div class="empty-state-icon">📁</div>
+      <div class="empty-state-text">No hay grupos registrados.<br>Crea uno con el botón "+ Nuevo".</div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ── MODAL PERSONA ──────────────────────────────────────── -->
+<div class="modal-overlay" id="modal-persona">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-persona-title">Nueva Persona</h3>
+      <button class="modal-close" onclick="closeModal('modal-persona')">×</button>
+    </div>
+    <div class="modal-body">
+      <form id="form-persona" enctype="multipart/form-data">
+        <input type="hidden" id="p-codigo" />
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Nombres *</label>
+            <input type="text" id="p-nombres" required />
+          </div>
+          <div class="form-group">
+            <label>Apellidos *</label>
+            <input type="text" id="p-apellidos" required />
+          </div>
+          <div class="form-group">
+            <label>Correo *</label>
+            <input type="email" id="p-correo" required />
+          </div>
+          <div class="form-group">
+            <label>Celular</label>
+            <input type="text" id="p-celular" />
+          </div>
+          <div class="form-group full">
+            <label>Dirección</label>
+            <input type="text" id="p-direccion" />
+          </div>
+          <div class="form-group full">
+            <label>Observaciones</label>
+            <textarea id="p-observaciones"></textarea>
+          </div>
+          <div class="form-group">
+            <label>Grupo *</label>
+            <select id="p-grupo" required></select>
+          </div>
+          <div class="form-group">
+            <label>Estado</label>
+            <select id="p-activo">
+              <option value="true">Activo</option>
+              <option value="false">Inactivo</option>
+            </select>
+          </div>
+          <div class="form-group full">
+            <label>Fotografía (máx. 2 MB)</label>
+            <div class="photo-upload-area" onclick="document.getElementById('p-foto-input').click()">
+              <img id="p-foto-preview" class="photo-preview" src="" style="display:none;" />
+              <div id="p-foto-placeholder">
+                <div style="font-size:24px;margin-bottom:4px;">📷</div>
+                <div style="color:var(--muted);font-size:11px;">Clic para subir foto</div>
+              </div>
+            </div>
+            <input type="file" id="p-foto-input" accept="image/*" style="display:none;" onchange="previewPhoto(this)" />
+          </div>
+        </div>
+        <div class="form-footer">
+          <button type="button" class="btn btn-ghost" onclick="closeModal('modal-persona')">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="btn-save-persona">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL GRUPO ────────────────────────────────────────── -->
+<div class="modal-overlay" id="modal-grupo">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-grupo-title">Nuevo Grupo</h3>
+      <button class="modal-close" onclick="closeModal('modal-grupo')">×</button>
+    </div>
+    <div class="modal-body">
+      <form id="form-grupo">
+        <input type="hidden" id="g-codigo" />
+        <div class="form-grid">
+          <div class="form-group full">
+            <label>Nombre del Grupo *</label>
+            <input type="text" id="g-nombre" required />
+          </div>
+          <div class="form-group">
+            <label>Estado</label>
+            <select id="g-activo">
+              <option value="true">Activo</option>
+              <option value="false">Inactivo</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-footer">
+          <button type="button" class="btn btn-ghost" onclick="closeModal('modal-grupo')">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL DETALLE ──────────────────────────────────────── -->
+<div class="modal-overlay" id="modal-detail">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Detalle de Contacto</h3>
+      <button class="modal-close" onclick="closeModal('modal-detail')">×</button>
+    </div>
+    <div class="modal-body" id="detail-content"></div>
+  </div>
+</div>
+
+<!-- ── TOAST ──────────────────────────────────────────────── -->
+<div class="toast" id="toast"></div>
+
+<script>
+const API = '';  // same origin
+let personas = [], grupos = [], personaView = 'grid';
+let currentView = 'personas';
+let isLoading = true;
+
+// ── SIDEBAR TOGGLE (mobile) ──────────────────────────────
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('nav-overlay').classList.toggle('open');
+}
+
+// ── NAVIGATION ────────────────────────────────────────────
+
+function showView(viewId, navEl) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById(viewId).classList.add('active');
+  navEl.classList.add('active');
+  currentView = viewId === 'personas-view' ? 'personas' : 'grupos';
+  document.getElementById('page-title').textContent = currentView === 'personas' ? 'Personas' : 'Grupos';
+  document.getElementById('btn-new').textContent = currentView === 'personas' ? '+ Nueva Persona' : '+ Nuevo Grupo';
+  // Close sidebar on mobile
+  if (window.innerWidth <= 768) toggleSidebar();
+}
+
+document.getElementById('btn-new').addEventListener('click', () => {
+  if (currentView === 'personas') openPersonaModal();
+  else openGrupoModal();
+});
+
+// ── API ───────────────────────────────────────────────────
+
+async function apiFetch(path, opts = {}) {
+  const r = await fetch(API + path, opts);
+  if (!r.ok) {
+    const errText = await r.text();
+    throw new Error(errText);
+  }
+  return r.json();
+}
+
+// ── LOAD DATA ─────────────────────────────────────────────
+
+async function loadAll() {
+  try {
+    [personas, grupos] = await Promise.all([
+      apiFetch('/personas'),
+      apiFetch('/grupos')
+    ]);
+    renderStats();
+    renderPersonas();
+    renderGrupos();
+    populateGrupoSelect();
+  } catch (err) {
+    toast('Error al cargar datos: ' + err.message, 'error');
+  } finally {
+    // Ocultar loading y mostrar vista
+    document.getElementById('loading-state').style.display = 'none';
+    if (!document.querySelector('.view.active')) {
+      document.getElementById('personas-view').classList.add('active');
+    }
+    document.querySelectorAll('.view').forEach(v => {
+      if (v.id === (currentView === 'personas' ? 'personas-view' : 'grupos-view')) {
+        v.classList.add('active');
+      }
+    });
+    isLoading = false;
+  }
+}
+
+function renderStats() {
+  document.getElementById('stat-total').textContent = personas.length;
+  document.getElementById('stat-active').textContent = personas.filter(p => p.esta_activo).length;
+  document.getElementById('stat-groups').textContent = grupos.length;
+}
+
+// ── PERSONAS ──────────────────────────────────────────────
+
+function setPersonaView(mode) {
+  personaView = mode;
+  document.getElementById('btn-grid').classList.toggle('active', mode === 'grid');
+  document.getElementById('btn-list').classList.toggle('active', mode === 'list');
+  document.getElementById('personas-grid').style.display = mode === 'grid' ? 'grid' : 'none';
+  document.getElementById('personas-table-wrap').style.display = mode === 'list' ? 'block' : 'none';
+}
+
+function filterPersonas() {
+  const q = document.getElementById('search-personas').value.toLowerCase();
+  const filtered = personas.filter(p =>
+    (p.nombres + ' ' + p.apellidos + ' ' + p.correo).toLowerCase().includes(q)
+  );
+  renderPersonasData(filtered);
+}
+
+function renderPersonas() { renderPersonasData(personas); }
+
+function renderPersonasData(list) {
+  const emptyEl = document.getElementById('personas-empty');
+
+  if (list.length === 0) {
+    document.getElementById('personas-grid').innerHTML = '';
+    document.getElementById('personas-tbody').innerHTML = '';
+    emptyEl.style.display = 'block';
+    return;
+  }
+  emptyEl.style.display = 'none';
+
+  // GRID
+  document.getElementById('personas-grid').innerHTML = list.map(p => `
+    <div class="contact-card" onclick="showDetail('${p.codigo}')">
+      <div class="card-photo">
+        ${p.fotografia
+          ? `<img src="${p.fotografia}" alt="${p.nombres}" loading="lazy" />`
+          : `<span style="font-size:48px;display:flex;align-items:center;justify-content:center;height:160px;background:var(--surface);">👤</span>`
+        }
+      </div>
+      <div class="card-body">
+        <div class="card-name">${p.nombres} ${p.apellidos}</div>
+        <div class="card-group">${p.grupo ? p.grupo.grupo : '—'}</div>
+        <div class="card-info">
+          ✉ ${p.correo}<br>
+          📱 ${p.nro_celular || '—'}
+        </div>
+        <div style="margin-top:10px;display:flex;align-items:center;justify-content:space-between;">
+          <span class="badge ${p.esta_activo ? 'badge-active' : 'badge-inactive'}">${p.esta_activo ? 'Activo' : 'Inactivo'}</span>
+          <div style="display:flex;gap:6px;" onclick="event.stopPropagation()">
+            <button class="btn btn-ghost" style="padding:5px 10px;" onclick="openPersonaModal('${p.codigo}')">✏</button>
+            <button class="btn btn-danger" style="padding:5px 10px;" onclick="deletePersona('${p.codigo}')">✕</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+
+  // TABLE
+  document.getElementById('personas-tbody').innerHTML = list.map(p => `
+    <tr>
+      <td><strong>${p.nombres} ${p.apellidos}</strong></td>
+      <td>${p.correo}</td>
+      <td>${p.nro_celular || '—'}</td>
+      <td>${p.grupo ? p.grupo.grupo : '—'}</td>
+      <td><span class="badge ${p.esta_activo ? 'badge-active' : 'badge-inactive'}">${p.esta_activo ? 'Activo' : 'Inactivo'}</span></td>
+      <td>
+        <div class="td-actions">
+          <button class="btn btn-ghost" style="padding:5px 10px;" onclick="showDetail('${p.codigo}')">👁</button>
+          <button class="btn btn-ghost" style="padding:5px 10px;" onclick="openPersonaModal('${p.codigo}')">✏</button>
+          <button class="btn btn-danger" style="padding:5px 10px;" onclick="deletePersona('${p.codigo}')">✕</button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+// ── GRUPOS ────────────────────────────────────────────────
+
+function filterGrupos() {
+  const q = document.getElementById('search-grupos').value.toLowerCase();
+  renderGruposData(grupos.filter(g => g.grupo.toLowerCase().includes(q)));
+}
+
+function renderGrupos() { renderGruposData(grupos); }
+
+function renderGruposData(list) {
+  const emptyEl = document.getElementById('grupos-empty');
+
+  if (list.length === 0) {
+    document.getElementById('grupos-tbody').innerHTML = '';
+    emptyEl.style.display = 'block';
+    return;
+  }
+  emptyEl.style.display = 'none';
+
+  document.getElementById('grupos-tbody').innerHTML = list.map(g => {
+    const count = personas.filter(p => p.grupo_codigo === g.codigo).length;
+    return `
+      <tr>
+        <td><strong>${g.grupo}</strong></td>
+        <td><span class="badge ${g.esta_activo ? 'badge-active' : 'badge-inactive'}">${g.esta_activo ? 'Activo' : 'Inactivo'}</span></td>
+        <td>${count} persona${count !== 1 ? 's' : ''}</td>
+        <td>
+          <div class="td-actions">
+            <button class="btn btn-ghost" style="padding:5px 10px;" onclick="openGrupoModal('${g.codigo}')">✏</button>
+            <button class="btn btn-danger" style="padding:5px 10px;" onclick="deleteGrupo('${g.codigo}')">✕</button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+// ── MODALS ────────────────────────────────────────────────
+
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// Persona Modal
+function openPersonaModal(codigo = null) {
+  document.getElementById('form-persona').reset();
+  document.getElementById('p-foto-preview').style.display = 'none';
+  document.getElementById('p-foto-placeholder').style.display = 'block';
+  document.getElementById('p-foto-input').value = '';
+
+  if (codigo) {
+    const p = personas.find(x => x.codigo === codigo);
+    document.getElementById('modal-persona-title').textContent = 'Editar Persona';
+    document.getElementById('p-codigo').value = p.codigo;
+    document.getElementById('p-nombres').value = p.nombres;
+    document.getElementById('p-apellidos').value = p.apellidos;
+    document.getElementById('p-correo').value = p.correo;
+    document.getElementById('p-celular').value = p.nro_celular || '';
+    document.getElementById('p-direccion').value = p.direccion || '';
+    document.getElementById('p-observaciones').value = p.observaciones || '';
+    document.getElementById('p-activo').value = String(p.esta_activo);
+    document.getElementById('p-grupo').value = p.grupo_codigo;
+    if (p.fotografia) {
+      document.getElementById('p-foto-preview').src = p.fotografia;
+      document.getElementById('p-foto-preview').style.display = 'block';
+      document.getElementById('p-foto-placeholder').style.display = 'none';
+    }
+  } else {
+    document.getElementById('modal-persona-title').textContent = 'Nueva Persona';
+    document.getElementById('p-codigo').value = '';
+  }
+  openModal('modal-persona');
+}
+
+function populateGrupoSelect() {
+  const sel = document.getElementById('p-grupo');
+  sel.innerHTML = '<option value="">— Seleccionar grupo —</option>' +
+    grupos.filter(g => g.esta_activo).map(g => `<option value="${g.codigo}">${g.grupo}</option>`).join('');
+}
+
+function previewPhoto(input) {
+  if (input.files && input.files[0]) {
+    // Validar tamaño en cliente
+    if (input.files[0].size > 2 * 1024 * 1024) {
+      toast('La foto excede 2 MB', 'error');
+      input.value = '';
+      return;
+    }
+    const url = URL.createObjectURL(input.files[0]);
+    document.getElementById('p-foto-preview').src = url;
+    document.getElementById('p-foto-preview').style.display = 'block';
+    document.getElementById('p-foto-placeholder').style.display = 'none';
+  }
+}
+
+document.getElementById('form-persona').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('btn-save-persona');
+  btn.disabled = true;
+  btn.textContent = 'Guardando…';
+
+  const codigo = document.getElementById('p-codigo').value;
+  const fd = new FormData();
+  fd.append('nombres',       document.getElementById('p-nombres').value);
+  fd.append('apellidos',     document.getElementById('p-apellidos').value);
+  fd.append('correo',        document.getElementById('p-correo').value);
+  fd.append('nro_celular',   document.getElementById('p-celular').value);
+  fd.append('direccion',     document.getElementById('p-direccion').value);
+  fd.append('observaciones', document.getElementById('p-observaciones').value);
+  fd.append('esta_activo',   document.getElementById('p-activo').value);
+  fd.append('grupo_codigo',  document.getElementById('p-grupo').value);
+  const foto = document.getElementById('p-foto-input').files[0];
+  if (foto) fd.append('fotografia', foto);
+
+  try {
+    if (codigo) {
+      await fetch(`${API}/personas/${codigo}`, { method: 'PUT', body: fd });
+      toast('Persona actualizada', 'success');
+    } else {
+      await fetch(`${API}/personas`, { method: 'POST', body: fd });
+      toast('Persona creada', 'success');
+    }
+    closeModal('modal-persona');
+    loadAll();
+  } catch (err) {
+    toast('Error al guardar: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Guardar';
+  }
+});
+
+async function deletePersona(codigo) {
+  if (!confirm('¿Eliminar esta persona?')) return;
+  try {
+    await apiFetch(`/personas/${codigo}`, { method: 'DELETE' });
+    toast('Persona eliminada', 'success');
+    loadAll();
+  } catch (err) {
+    toast('Error al eliminar: ' + err.message, 'error');
+  }
+}
+
+// Grupo Modal
+function openGrupoModal(codigo = null) {
+  document.getElementById('form-grupo').reset();
+  if (codigo) {
+    const g = grupos.find(x => x.codigo === codigo);
+    document.getElementById('modal-grupo-title').textContent = 'Editar Grupo';
+    document.getElementById('g-codigo').value = g.codigo;
+    document.getElementById('g-nombre').value = g.grupo;
+    document.getElementById('g-activo').value = String(g.esta_activo);
+  } else {
+    document.getElementById('modal-grupo-title').textContent = 'Nuevo Grupo';
+    document.getElementById('g-codigo').value = '';
+  }
+  openModal('modal-grupo');
+}
+
+document.getElementById('form-grupo').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const codigo = document.getElementById('g-codigo').value;
+  const body = {
+    grupo: document.getElementById('g-nombre').value,
+    esta_activo: document.getElementById('g-activo').value === 'true'
+  };
+  try {
+    if (codigo) {
+      await apiFetch(`/grupos/${codigo}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      toast('Grupo actualizado', 'success');
+    } else {
+      await apiFetch('/grupos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      toast('Grupo creado', 'success');
+    }
+    closeModal('modal-grupo');
+    loadAll();
+  } catch (err) {
+    toast('Error al guardar: ' + err.message, 'error');
+  }
+});
+
+async function deleteGrupo(codigo) {
+  if (!confirm('¿Eliminar este grupo?')) return;
+  try {
+    await apiFetch(`/grupos/${codigo}`, { method: 'DELETE' });
+    toast('Grupo eliminado', 'success');
+    loadAll();
+  } catch (err) {
+    // Mostrar mensaje de error del backend (ej: grupo tiene personas)
+    let msg = 'Error al eliminar grupo';
+    try {
+      const parsed = JSON.parse(err.message);
+      msg = parsed.detail || msg;
+    } catch(_) { msg = err.message; }
+    toast(msg, 'error');
+  }
+}
+
+// ── DETAIL ────────────────────────────────────────────────
+
+function showDetail(codigo) {
+  const p = personas.find(x => x.codigo === codigo);
+  if (!p) return;
+  document.getElementById('detail-content').innerHTML = `
+    ${p.fotografia
+      ? `<img src="${p.fotografia}" class="detail-photo" loading="lazy" />`
+      : `<div style="width:100px;height:100px;border-radius:50%;background:var(--surface);border:3px solid var(--accent);display:flex;align-items:center;justify-content:center;font-size:40px;margin:0 auto 20px;">👤</div>`
+    }
+    <div class="detail-name">${p.nombres} ${p.apellidos}</div>
+    <div class="detail-group">${p.grupo ? p.grupo.grupo : '—'}</div>
+    <div style="text-align:center;margin-bottom:20px;">
+      <span class="badge ${p.esta_activo ? 'badge-active' : 'badge-inactive'}">${p.esta_activo ? 'Activo' : 'Inactivo'}</span>
+    </div>
+    <div class="detail-grid">
+      <div class="detail-item">
+        <label>Correo</label>
+        <span>${p.correo}</span>
+      </div>
+      <div class="detail-item">
+        <label>Celular</label>
+        <span>${p.nro_celular || '—'}</span>
+      </div>
+      <div class="detail-item" style="grid-column:1/-1">
+        <label>Dirección</label>
+        <span>${p.direccion || '—'}</span>
+      </div>
+      ${p.observaciones ? `
+      <div class="detail-item" style="grid-column:1/-1">
+        <label>Observaciones</label>
+        <span>${p.observaciones}</span>
+      </div>` : ''}
+      <div class="detail-item" style="grid-column:1/-1">
+        <label>ID interno (UUID)</label>
+        <span style="font-size:10px;color:var(--muted);word-break:break-all;">${p.codigo}</span>
+      </div>
+    </div>
+    <div class="form-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-detail')">Cerrar</button>
+      <button class="btn btn-primary" onclick="closeModal('modal-detail');openPersonaModal('${p.codigo}')">Editar</button>
+    </div>
+  `;
+  openModal('modal-detail');
+}
+
+// ── TOAST ─────────────────────────────────────────────────
+
+function toast(msg, type = 'success') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `toast ${type} show`;
+  setTimeout(() => el.classList.remove('show'), 3500);
+}
+
+// ── CLOSE ON BACKDROP ─────────────────────────────────────
+
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
+});
+
+// ── PWA REGISTRATION ──────────────────────────────────────
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
+
+// ── INIT ──────────────────────────────────────────────────
+loadAll();
+</script>
+</body>
+</html>
