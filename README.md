@@ -1,145 +1,138 @@
-# 📒 Gestión de Contactos — Despliegue en Render
+# 📒 Gestión de Contactos
 
-Aplicación Full Stack (FastAPI + PostgreSQL) desplegada en [Render.com](https://render.com).
+**Aplicación Full Stack** para gestión de un directorio de contactos con fotografías, desarrollada con **FastAPI + PostgreSQL + Supabase**, desplegada en **Render.com**.
 
-## Stack
+> 🌐 **Demo en vivo:** [contactos-app-c3h3.onrender.com](https://contactos-app-c3h3.onrender.com)
 
-| Capa | Tecnología |
-|------|-----------|
-| Backend + Frontend | FastAPI (Python 3.12) |
-| Base de datos | PostgreSQL 16 (Render managed) |
-| Hosting | Render Web Service |
-| CI/CD | GitHub → Render (auto-deploy en push) |
+---
 
-## Estructura del Proyecto
+## 📸 Screenshots
+
+| Vista Personas (Galería) | Vista Grupos | Detalle de Contacto |
+|:---:|:---:|:---:|
+| Grid responsivo con tarjetas | Tabla con estado y contador | Modal con foto ampliada y UUID |
+
+---
+
+## ✨ Funcionalidades
+
+- ✅ **CRUD completo** de Personas y Grupos
+- ✅ **UUID v4** como identificador interno de cada registro
+- ✅ **Fotografías** almacenadas en Supabase Storage (bucket público)
+- ✅ **Relación 1:N** — Un grupo tiene muchas personas
+- ✅ **Vista Galería** — Tarjetas con foto, nombre, grupo y datos
+- ✅ **Vista Lista** — Tabla ordenada con acciones
+- ✅ **Detalle** — Modal completo con todos los datos y UUID visible
+- ✅ **Búsqueda en tiempo real** por nombre, apellido y correo
+- ✅ **Estadísticas** — Total contactos, activos y grupos
+- ✅ **Responsive** — Funciona en desktop, tablet y celular
+- ✅ **PWA** — Instalable como app nativa en dispositivos móviles
+- ✅ **Protección de integridad** — No permite eliminar grupos con personas
+
+---
+
+## 🛠️ Stack Tecnológico
+
+| Capa | Tecnología | Versión | Rol |
+|------|-----------|---------|-----|
+| Backend | FastAPI | 0.111 | API REST + sirve HTML |
+| Runtime | Python | 3.12 | Lenguaje principal |
+| ORM | SQLAlchemy | 2.0 | Mapeo objeto-relacional |
+| Validación | Pydantic | 2.7 | Esquemas de validación |
+| Base de Datos | PostgreSQL (Supabase) | 15 | Datos de contactos y grupos |
+| Almacenamiento | Supabase Storage | — | Fotografías |
+| Servidor | Uvicorn | 0.29 | ASGI server producción |
+| Hosting | Render.com | free | Plataforma PaaS |
+| HTTP Client | httpx | 0.27 | Comunicación con Supabase |
+
+---
+
+## 📁 Estructura del Proyecto
 
 ```
-contactos-render/
-├── main.py           # API REST + sirve el frontend
-├── models.py         # Tablas SQLAlchemy (UUID como PK)
-├── schemas.py        # Validación Pydantic
-├── database.py       # Conexión PostgreSQL via DATABASE_URL
-├── requirements.txt  # Dependencias Python
-├── render.yaml       # Blueprint de infraestructura Render
-├── .gitignore
+contactos-app/
+├── .env.example          # Template de variables de entorno
+├── .gitignore            # Archivos excluidos
+├── .python-version       # Pin Python 3.12.3
+├── database.py           # Conexión SQLAlchemy + dotenv
+├── main.py               # API REST + rutas frontend
+├── models.py             # Modelos ORM (Grupo, Persona)
+├── schemas.py            # Esquemas Pydantic
+├── render.yaml           # Blueprint Render
+├── requirements.txt      # Dependencias Python
+├── supabase_storage.py   # Helper Supabase Storage API
 └── frontend/
-    └── index.html    # SPA completa (HTML/CSS/JS)
-```
-
-> **Nota sobre fotografías:** Las fotos se almacenan como `base64` directamente
-> en PostgreSQL, lo que garantiza persistencia aunque Render reinicie el servicio
-> (el filesystem de Render es efímero en el plan gratuito).
-
----
-
-## 🚀 Despliegue en Render — Paso a Paso
-
-### Opción A: Blueprint automático (recomendado)
-
-1. Sube el código a GitHub
-2. En [render.com](https://render.com) → **New** → **Blueprint**
-3. Conecta tu repo → Render lee `render.yaml` y crea todo automáticamente
-
-### Opción B: Manual (paso a paso detallado)
-
-#### 1. Preparar el repositorio en GitHub
-
-```bash
-git init
-git add .
-git commit -m "feat: initial commit - gestión de contactos"
-git branch -M main
-git remote add origin https://github.com/TU_USUARIO/contactos-app.git
-git push -u origin main
-```
-
-#### 2. Crear la base de datos PostgreSQL en Render
-
-1. Ir a [dashboard.render.com](https://dashboard.render.com)
-2. Click **New +** → **PostgreSQL**
-3. Configurar:
-   - **Name:** `contactos-db`
-   - **Database:** `contactos_db`
-   - **User:** `contactos_user`
-   - **Region:** Oregon (US West) — el más cercano disponible en plan free
-   - **Plan:** Free
-4. Click **Create Database**
-5. Guardar el **Internal Database URL** (lo necesitas en el paso siguiente)
-
-#### 3. Crear el Web Service en Render
-
-1. Click **New +** → **Web Service**
-2. Conectar tu repositorio de GitHub
-3. Configurar:
-   - **Name:** `contactos-app`
-   - **Region:** Oregon (US West) — **igual que la BD**
-   - **Branch:** `main`
-   - **Runtime:** Python 3
-   - **Build Command:** `pip install -r requirements.txt`
-   - **Start Command:** `uvicorn main:app --host 0.0.0.0 --port $PORT`
-   - **Plan:** Free
-4. En la sección **Environment Variables**, agregar:
-   - Key: `DATABASE_URL`
-   - Value: pegar el **Internal Database URL** copiado del paso anterior
-5. Click **Create Web Service**
-
-#### 4. Verificar el despliegue
-
-Render tardará ~2-3 minutos en el primer build. Cuando diga **Live**:
-
-- Frontend: `https://contactos-app.onrender.com`
-- API Docs: `https://contactos-app.onrender.com/docs`
-
-#### 5. Auto-deploy (CI/CD automático)
-
-Cada `git push` a `main` dispara un nuevo deploy automáticamente:
-
-```bash
-# Flujo de trabajo en equipo
-git checkout -b feature/nueva-funcionalidad
-# ... hacer cambios ...
-git add . && git commit -m "feat: descripción del cambio"
-git push origin feature/nueva-funcionalidad
-# Crear Pull Request en GitHub → merge a main → Render despliega
+    ├── index.html        # SPA completa
+    ├── manifest.json     # Manifest PWA
+    ├── sw.js             # Service Worker
+    ├── icon-192.png      # Icono PWA 192×192
+    └── icon-512.png      # Icono PWA 512×512
 ```
 
 ---
 
-## Desarrollo Local
+## 🚀 Despliegue Rápido
+
+### Variables de Entorno Requeridas
+
+```env
+DATABASE_URL=postgresql://user:pass@host:6543/postgres
+SUPABASE_URL=https://xxx.supabase.co
+SUPABASE_KEY=your_anon_key
+```
+
+### Local
 
 ```bash
-# Requiere Python 3.12+ y PostgreSQL local, o usar Docker solo para la BD:
-docker run -d --name pg -e POSTGRES_DB=contactos_db \
-  -e POSTGRES_USER=contactos_user \
-  -e POSTGRES_PASSWORD=contactos_pass \
-  -p 5432:5432 postgres:16-alpine
+# 1. Clonar
+git clone https://github.com/Noelialo/contactos-app.git
+cd contactos-app
 
-# Instalar dependencias
+# 2. Entorno virtual
+python3 -m venv .venv
+source .venv/bin/activate
+
+# 3. Dependencias
 pip install -r requirements.txt
 
-# Ejecutar
-DATABASE_URL=postgresql://contactos_user:contactos_pass@localhost:5432/contactos_db \
-  uvicorn main:app --reload
+# 4. Variables de entorno
+cp .env.example .env   # Editar con tus credenciales
 
-# Abrir http://localhost:8000
+# 5. Ejecutar
+uvicorn main:app --reload --port 8000
+```
+
+### Render.com
+
+1. Conectar repo GitHub → **New Web Service**
+2. Build Command: `pip install -r requirements.txt`
+3. Start Command: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+4. Agregar variables de entorno (DATABASE_URL, SUPABASE_URL, SUPABASE_KEY)
+5. Deploy 🚀
+
+---
+
+## 📊 Modelo de Datos
+
+```
+┌─────────────────┐        ┌──────────────────────┐
+│     GRUPOS      │        │      PERSONAS        │
+├─────────────────┤        ├──────────────────────┤
+│ codigo (PK/UUID)│───1:N─▶│ codigo (PK/UUID)     │
+│ grupo           │        │ nombres              │
+│ esta_activo     │        │ apellidos            │
+└─────────────────┘        │ correo               │
+                           │ nro_celular          │
+                           │ direccion            │
+                           │ observaciones        │
+                           │ fotografia (URL)     │
+                           │ esta_activo          │
+                           │ grupo_codigo (FK)    │
+                           └──────────────────────┘
 ```
 
 ---
 
-## API Endpoints
+## 📝 Licencia
 
-| Método | Endpoint | Descripción |
-|--------|----------|-------------|
-| GET | `/grupos` | Listar grupos |
-| POST | `/grupos` | Crear grupo |
-| PUT | `/grupos/{id}` | Actualizar grupo |
-| DELETE | `/grupos/{id}` | Eliminar grupo |
-| GET | `/personas` | Listar personas |
-| POST | `/personas` | Crear persona (con foto) |
-| GET | `/personas/{id}` | Obtener persona |
-| PUT | `/personas/{id}` | Actualizar persona |
-| DELETE | `/personas/{id}` | Eliminar persona |
-
----
-
-## Equipo — LG3 Cloud Computing 2026
+Proyecto académico — LG3 Cloud Computing · UNIVALLE · 2026
