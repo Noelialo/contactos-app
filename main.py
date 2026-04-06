@@ -11,7 +11,11 @@ import models, schemas
 import supabase_storage
 
 # Crear tablas (si no existen)
-models.Base.metadata.create_all(bind=engine)
+try:
+    models.Base.metadata.create_all(bind=engine)
+except Exception as e:
+    print(f"⚠️  No se pudo conectar a la BD al inicio: {e}")
+    print("   Las tablas se crearán cuando la BD esté disponible.")
 
 app = FastAPI(title="Gestión de Contactos API", version="1.0.0")
 
