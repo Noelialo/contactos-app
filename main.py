@@ -66,6 +66,15 @@ def service_worker():
     return FileResponse(str(FRONTEND_DIR / "sw.js"), media_type="application/javascript")
 
 
+@app.get("/icon-192.png")
+def icon_192():
+    return FileResponse(str(FRONTEND_DIR / "icon-192.png"), media_type="image/png")
+
+
+@app.get("/icon-512.png")
+def icon_512():
+    return FileResponse(str(FRONTEND_DIR / "icon-512.png"), media_type="image/png")
+
 # ── HEALTH ─────────────────────────────────────────────────────────────────
 
 @app.get("/health")
